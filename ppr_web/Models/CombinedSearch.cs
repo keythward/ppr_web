@@ -8,6 +8,7 @@ using ppr_web.DatabaseConn;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.Linq;
 
 namespace ppr_web.Models
@@ -15,6 +16,8 @@ namespace ppr_web.Models
     public class CombinedSearch
     {
         public IList<Line> lineList { get; set; }
+        [DisplayName("check box if you do not want properties that did not sell for the market price included in the search")]
+        public bool takeOutNoMarket { get; set; }
 
         public CombinedSearch()
         {
@@ -29,11 +32,9 @@ namespace ppr_web.Models
             {
                 List<Highcharts> chartList = new List<Highcharts>();
                 List < List < ListObject >> allLists = new List<List<ListObject>>();
-                List<object> min = new List<object>();
-                List<object> max = new List<object>();
-                List<object> median = new List<object>();
+                List<string> linesString = new List<string>();
                 // get data needed for charts
-                foreach(Line line in lineList)
+                foreach (Line line in lineList)
                 {
                     List<ListObject> list = new List<ListObject>();
                     List<ListObject> temp = new List<ListObject>();
@@ -71,6 +72,14 @@ namespace ppr_web.Models
                             temp.Clear();
                         }
                     }
+                    // if market price check box clicked remove from list
+                    if (takeOutNoMarket)
+                    {
+                        temp = list.Where(i => i.NotFullMP.Equals('N')).ToList();
+                        list.Clear();
+                        list.AddRange(temp);
+                        temp.Clear();
+                    }
                     // take out every entry that matches the area picked
                     try
                     {
@@ -84,54 +93,120 @@ namespace ppr_web.Models
                     }
                     catch(Exception e)
                     {
-
+                        Console.WriteLine(e.ToString());
                     }
                     // add to list
                     allLists.Add(list);
+                    // get line details for charts
+                    string lineString = line.County;
+                    try
+                    {
+                        if (!line.Area.Equals(""))
+                        {
+                            lineString += ", ";
+                            lineString += line.Area;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                    lineString += ", ";
+                    lineString += line.Year;
+                    linesString.Add(lineString);
                 }
                 // calculate data
+                List<object> min = new List<object>();
+                List<object> max = new List<object>();
+                List<object> median = new List<object>();
+                List<object> newDwelling = new List<object>();
+                List<object> secondDwelling = new List<object>();
                 foreach (List<ListObject> list in allLists)
                 {
+                    // max
                     double maxValue = list.Max(i => i.Price);
                     max.Add(maxValue);
+                    // min
                     double minValue = list.Min(i => i.Price);
                     min.Add(minValue);
-                    // get median
+                    // median
                     list.OrderBy(i => i.Price).ToList();
                     double medianValue = list.ElementAt((list.Count-1)/2).Price;
                     median.Add(medianValue);
+                    // new/second dwelling
+                    // market yes/no
+                    int newD = 0;
+                    int secD = 0;
+                    foreach(var l in list)
+                    {
+                        if (l.Description.Equals('N'))
+                        {
+                            newD++;
+                        }
+                        else
+                        {
+                            secD++;
+                        }
+                    }
+                    newDwelling.Add(newD);
+                    secondDwelling.Add(secD);
                 }
                 // create chart for min,max,median values
                 Highcharts chart = new Highcharts("chart1")
+                    .InitChart(new Chart { Type = ChartTypes.Column, Inverted = true })
                     .SetXAxis(new XAxis
                     {
-                        Categories = new[] { "Line 1", "Line 2" }
+                        Categories = linesString.ToArray()
                     })
                     .SetSeries(new[]
                            {
                                new Series
                                 {
-                                    Type = ChartTypes.Column,
                                     Name = "Minimum",
                                     Data = new Data(min.ToArray())
                                 },
                                 new Series
                                 {
-                                    Type = ChartTypes.Column,
                                     Name = "Maximum",
                                     Data = new Data(max.ToArray())
                                 },
                                 new Series
                                 {
-                                    Type = ChartTypes.Column,
                                     Name = "Median",
                                     Data = new Data(median.ToArray())
                                 }
+                                
+                                
                            });
+                Highcharts chart2 = new Highcharts("chart")
+                    .InitChart(new Chart { Type = ChartTypes.Column })
+                    .SetTitle(new Title { Text = "New and Second Hand Dwellings in Chosen Region" })
+                    .SetXAxis(new XAxis
+                    {
+                        Categories = linesString.ToArray()
+                    })
+                    .SetYAxis(new YAxis
+                    {
+                        Title = new YAxisTitle { Text = "Percent" }
+                    })
+                    .SetTooltip(new Tooltip { Formatter = "function() { return Highcharts.numberFormat(this.percentage, 1) +'% ('+ Highcharts.numberFormat(this.y, 0, ',') +' dwellings)'; }" })
+                    .SetPlotOptions(new PlotOptions { Column = new PlotOptionsColumn { Stacking = Stackings.Percent } })
+                    .SetSeries(new[]
+                    {
+                        new Series
+                                {
+                                    Name = "new",
+                                    Data = new Data(newDwelling.ToArray())
+                                },
+                        new Series
+                                {
+                                    Name = "second",
+                                    Data = new Data(secondDwelling.ToArray())
+                                }
+                    });
+                
 
-
-
-                chartList.Add(chart);
+                chartList.Add(chart2);
                 return chartList;
             }
         }

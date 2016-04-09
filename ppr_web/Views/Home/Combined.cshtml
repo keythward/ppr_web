@@ -36,6 +36,10 @@
                     @Html.ActionLink(" Add", "BlankEditorRow", null, new { id = "addItem", @class = "btn btn-xs btn-success glyphicon glyphicon-plus-sign" });
                 </div>
                 <div class="padding-top-25">
+                    @Html.EditorFor(m => m.takeOutNoMarket)
+                    @Html.LabelFor(m => m.takeOutNoMarket)
+                </div>
+                <div class="padding-top-25">
                     <input type="submit" value="Search" class="btn btn-default" />
                 </div>
             </div>
