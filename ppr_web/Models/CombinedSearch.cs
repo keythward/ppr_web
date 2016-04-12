@@ -10,15 +10,31 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
-
 namespace ppr_web.Models
 {
     public class CombinedSearch
     {
+        // list of dynamically created line objects
         public IList<Line> lineList { get; set; }
+        // used for check box on view for market value being included in search
         [DisplayName("check box if you do not want properties that did not sell for the market price included in the search")]
         public bool takeOutNoMarket { get; set; }
-
+        // different lists required for charts
+        List<Highcharts> chartList;
+        List<List<ListObject>> allLists;
+        List<string> linesString;
+        List<object> median;
+        List<object> newDwelling;
+        List<object> secondDwelling;
+        List<object> newPercentages;
+        List<object> secPercentages;
+        List<List<object>> newValues;
+        List<List<object>> secValues;
+        List<object> finalNewData;
+        List<object> finalSecData;
+        Series[] objectArrayForListChart;
+        string[] categoriesDrilldown = { "Minimum", "Median", "Maximum" };
+        // constructor needed to initialize for dynamically created line objects on view
         public CombinedSearch()
         {
             lineList = new List<Line>();
@@ -30,345 +46,398 @@ namespace ppr_web.Models
         {
             get
             {
-                List<Highcharts> chartList = new List<Highcharts>();
-                List < List < ListObject >> allLists = new List<List<ListObject>>();
-                List<string> linesString = new List<string>();
-                // get data needed for charts
-                foreach (Line line in lineList)
-                {
-                    List<ListObject> list = new List<ListObject>();
-                    List<ListObject> temp = new List<ListObject>();
-                    list = GetLists(line.County,line.Year,line.Date);
-                    // if dublin take out postcode picked
-                    if (line.County.Equals("Dublin"))
-                    {
-                        if (!line.PostCode.Equals("All"))
-                        {
-                            string pc = "";
-                            if (line.PostCode.Equals("county dublin"))
-                            {
-                                pc = line.PostCode;
-                                foreach (var r in list)
-                                {
-                                    if (r.PostCode.Equals(pc))
-                                    {
-                                        temp.Add(r);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                pc = "dublin " + line.PostCode;
-                                foreach (var r in list)
-                                {
-                                    if (r.PostCode.Equals(pc))
-                                    {
-                                        temp.Add(r);
-                                    }
-                                }
-                            }
-                            list.Clear();
-                            list.AddRange(temp);
-                            temp.Clear();
-                        }
-                    }
-                    // if market price check box clicked remove from list
-                    if (takeOutNoMarket)
-                    {
-                        temp = list.Where(i => i.NotFullMP.Equals('N')).ToList();
-                        list.Clear();
-                        list.AddRange(temp);
-                        temp.Clear();
-                    }
-                    // take out every entry that matches the area picked
-                    try
-                    {
-                        if (!line.Area.Equals(""))
-                        {
-                            temp = list.Where(i => i.Address.Contains(line.Area.ToLower())).ToList();
-                            list.Clear();
-                            list.AddRange(temp);
-                            temp.Clear();
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
-                    // add to list
-                    allLists.Add(list);
-                    // get line details for charts
-                    string lineString = line.County;
-                    try
-                    {
-                        if (!line.Area.Equals(""))
-                        {
-                            lineString += ", ";
-                            lineString += line.Area;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
-                    lineString += ", ";
-                    lineString += line.Year;
-                    linesString.Add(lineString);
-                }
-                // calculate data
-                List<object> min = new List<object>();
-                List<object> max = new List<object>();
-                List<object> median = new List<object>();
-                List<object> newDwelling = new List<object>();
-                List<object> secondDwelling = new List<object>();
-                foreach (List<ListObject> list in allLists)
-                {
-                    // max
-                    double maxValue = list.Max(i => i.Price);
-                    max.Add(maxValue);
-                    // min
-                    double minValue = list.Min(i => i.Price);
-                    min.Add(minValue);
-                    // median
-                    list.OrderBy(i => i.Price).ToList();
-                    double medianValue = list.ElementAt((list.Count-1)/2).Price;
-                    median.Add(medianValue);
-                    // new/second dwelling
-                    // market yes/no
-                    int newD = 0;
-                    int secD = 0;
-                    foreach(var l in list)
-                    {
-                        if (l.Description.Equals('N'))
-                        {
-                            newD++;
-                        }
-                        else
-                        {
-                            secD++;
-                        }
-                    }
-                    newDwelling.Add(newD);
-                    secondDwelling.Add(secD);
-                }
-                // create chart for min,max,median values
-                Highcharts chart = new Highcharts("chart1")
-                    .InitChart(new Chart { Type = ChartTypes.Column, Inverted = true })
+                string[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+                // list to hold all charts to be returned to view
+                chartList = new List<Highcharts>();
+                // get data needed for charts from returned lists
+                getChartData();
+                // calculate data needed for charts
+                calculateChartData();
+                // line chart with median values per month per region
+                Highcharts lineChart = new Highcharts("lineChart")
+                    .InitChart(new Chart { Type = ChartTypes.Line })
+                    .SetTitle(new Title { Text = "Median Property Prices Per Month Per Region" })
+                    .SetSubtitle(new Subtitle { Text = "(Median Property Price For The Whole Year)" })
+                    .SetYAxis(new YAxis { Title = new YAxisTitle { Text = "Median Property Values" } })
+                    .SetPlotOptions(new PlotOptions { Column = new PlotOptionsColumn { DataLabels = new PlotOptionsColumnDataLabels { Enabled = true } } })
                     .SetXAxis(new XAxis
                     {
-                        Categories = linesString.ToArray()
+                        Categories = months
+                    })
+                    .SetSeries(objectArrayForListChart);
+                chartList.Add(lineChart);
+                // new/second hand dwellings percentage per region
+                Data newData = new Data(finalNewData.ToArray());
+                Data secData = new Data(finalSecData.ToArray());
+                const string NAME = "New/Second Hand Properties";
+                Highcharts chart = new Highcharts("chart")
+                    .InitChart(new Chart { DefaultSeriesType = ChartTypes.Column })
+                    .SetTitle(new Title { Text = "Percentage of New and Second Hand Properties per Region" })
+                    .SetSubtitle(new Subtitle { Text = "Click the columns to view min/median/max values. Click again to view percentages." })
+                    .SetXAxis(new XAxis { Categories = linesString.ToArray() })
+                    .SetYAxis(new YAxis { Title = new YAxisTitle { Text = "Percentage" } })
+                    .SetLegend(new Legend { Enabled = false })
+                    .SetTooltip(new Tooltip { Formatter = "TooltipFormatter" })
+                    .SetPlotOptions(new PlotOptions
+                    {
+                        Column = new PlotOptionsColumn
+                        {
+                            Cursor = Cursors.Pointer,
+                            Point = new PlotOptionsColumnPoint { Events = new PlotOptionsColumnPointEvents { Click = "ColumnPointClick" } },
+                            DataLabels = new PlotOptionsColumnDataLabels
+                            {
+                                Enabled = true,
+                                Color = Color.DarkOrange,
+                                Formatter = "labelFormatter",
+                                Style = "fontWeight: 'bold'"
+                            }
+                        }
                     })
                     .SetSeries(new[]
-                           {
-                               new Series
-                                {
-                                    Name = "Minimum",
-                                    Data = new Data(min.ToArray())
-                                },
-                                new Series
-                                {
-                                    Name = "Maximum",
-                                    Data = new Data(max.ToArray())
-                                },
-                                new Series
-                                {
-                                    Name = "Median",
-                                    Data = new Data(median.ToArray())
-                                }
-                                
-                                
-                           });
-                Highcharts chart2 = new Highcharts("chart")
-                    .InitChart(new Chart { Type = ChartTypes.Column })
-                    .SetTitle(new Title { Text = "New and Second Hand Dwellings in Chosen Region" })
-                    .SetXAxis(new XAxis
-                    {
-                        Categories = linesString.ToArray()
-                    })
-                    .SetYAxis(new YAxis
-                    {
-                        Title = new YAxisTitle { Text = "Percent" }
-                    })
-                    .SetTooltip(new Tooltip { Formatter = "function() { return Highcharts.numberFormat(this.percentage, 1) +'% ('+ Highcharts.numberFormat(this.y, 0, ',') +' dwellings)'; }" })
-                    .SetPlotOptions(new PlotOptions { Column = new PlotOptionsColumn { Stacking = Stackings.Percent } })
-                    .SetSeries(new[]
-                    {
-                        new Series
-                                {
-                                    Name = "new",
-                                    Data = new Data(newDwelling.ToArray())
-                                },
-                        new Series
-                                {
-                                    Name = "second",
-                                    Data = new Data(secondDwelling.ToArray())
-                                }
-                    });
-                
+                                           {new Series
+                                            {
+                                                Name = "new dwellings",
+                                                Data = newData,
+                                                Color = Color.White
+                                            },
+                                            new Series
+                                            {
+                                                Name = "second hand dwellings",
+                                                Data = secData,
+                                                Color = Color.White
+                                            }
+                                           })
+                    .SetExporting(new Exporting { Enabled = false })
+                    .AddJavascripFunction(
+                        "TooltipFormatter",
+                        @"var point = this.point, s = '';
+                                  if (point.drilldown) {
+                                    s += this.x +':<b>'+ this.y +'% of '+ this.series.name +' in region</b><br/>' + 'Click to view '+ point.category +' values';
+                                  } else {
+                                    s += this.x +': €<b>'+ this.y +' value</b><br/>'+'Click to return to region percentages';
+                                  }
+                                  return s;"
+                    )
+                    .AddJavascripFunction(
+                        "labelFormatter",
+                        @"var point = this.point, s = this.y +'%';
+                                  if (point.drilldown) {
+                                    
+                                  } else {
+                                    s = '€' + this.y;
+                                  }
+                                  return s;
+                        "
+                    )
+                    .AddJavascripFunction(
+                        "ColumnPointClick",
+                        @"var drilldown = this.drilldown;
+                                  if (drilldown) { // drill down
+                                    setChart(drilldown.name, drilldown.categories, drilldown.data.data, drilldown.color);
+                                  } else { // restore
+                                    chart.xAxis[0].setCategories(categories);
+                                    while(chart.series.length > 0) {
+                                    chart.series[0].remove(true);
+                                    }
+                                    for (var i = 0; i < data.length ; i++)
+                                    {
+                                        
+                                         chart.addSeries({
+                                         name: name,
+                                         data: data[i].data,
+                                         color:'white'
+                                         });
+                                    }
+                                  }"
+                    )
+                    .AddJavascripFunction(
+                        "setChart",
+                        @"chart.xAxis[0].setCategories(categories);
+                            chart.yAxis[0].setTitle({ text: 'Property Values' });
+                                  while (chart.series.length > 0) {
+                      chart.series[0].remove(true);
+                  }
+                                  chart.addSeries({
+                                     name: name,
+                                     data: data,
+                                     color: color || 'white'
+                                  });",
+                        "name", "categories", "data", "color"
+                    )
+                    .AddJavascripVariable("colors", "Highcharts.getOptions().colors")
+                    .AddJavascripVariable("name", "'{0}'".FormatWith(NAME))
+                    .AddJavascripVariable("categories", JsonSerializer.Serialize(linesString.ToArray()))
+                    .AddJavascripVariable("data", JsonSerializer.Serialize(new[] { newData, secData }));
+                chartList.Add(chart);
 
-                chartList.Add(chart2);
+
                 return chartList;
             }
         }
 
         // return a list of records for the chosen search county and year
-        public List<ListObject> GetLists(string county,string year,string dates)
+        public List<ListObject> GetLists(string county,string year)
         {
             List<ListObject> list = new List<ListObject>();
             string doc_id = "";
             DBRecord test = null;
             if (county.Equals("Dublin"))
             {
-                if (dates.Equals("All Year"))
-                {
-                    doc_id = county + year + "_1";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                    test = null;
-                    doc_id = county + year + "_2";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_3";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_4";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_5";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_6";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_7";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_8";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_9";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_10";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_11";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = county + year + "_12";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                }
-                else if (dates.Equals("January"))
-                {
-                    doc_id = county + year + "_1";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("February"))
-                {
-                    doc_id = county + year + "_2";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("March"))
-                {
-                    doc_id = county + year + "_3";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("April"))
-                {
-                    doc_id = county + year + "_4";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("May"))
-                {
-                    doc_id = county + year + "_5";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("June"))
-                {
-                    doc_id = county + year + "_6";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("July"))
-                {
-                    doc_id = county + year + "_7";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("August"))
-                {
-                    doc_id = county + year + "_8";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("September"))
-                {
-                    doc_id = county + year + "_9";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("October"))
-                {
-                    doc_id = county + year + "_10";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else if (dates.Equals("November"))
-                {
-                    doc_id = county + year + "_11";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else // december
-                {
-                    doc_id = county + year + "_12";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
+                doc_id = county + year + "_1";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list = test.records;
+                test = null;
+                doc_id = county + year + "_2";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_3";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_4";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_5";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_6";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_7";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_8";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_9";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_10";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_11";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
+                doc_id = county + year + "_12";
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
+                test = null;
             }
             else // rest of ireland (not dublin)
             {
-                if (dates.Equals("All Year"))
-                {
-                    doc_id = county + year + "_A"; // first part of year
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                    test = null;
-                    doc_id = county + year + "_B"; // second part of year
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                }
-                else if (dates.Equals("First 6 Months"))
-                {
-                    doc_id = county + year + "_A";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
-                else // last 6 months
-                {
-                    doc_id = county + year + "_B";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                }
+                doc_id = county + year + "_A"; // first part of year
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list = test.records;
+                test = null;
+                doc_id = county + year + "_B"; // second part of year
+                test = DatabaseConnect2.ReadDocument(doc_id);
+                list.AddRange(test.records);
             }
             return list;
+        }
+
+        // get the data needed for charts
+        public void getChartData()
+        {
+            linesString = new List<string>();
+            allLists = new List<List<ListObject>>();
+            foreach (Line line in lineList)
+            {
+                List<ListObject> list = new List<ListObject>();
+                List<ListObject> temp = new List<ListObject>();
+                list = GetLists(line.County, line.Year);
+                // if dublin take out postcode picked
+                if (line.County.Equals("Dublin"))
+                {
+                    if (!line.PostCode.Equals("All"))
+                    {
+                        string pc = "";
+                        if (line.PostCode.Equals("county dublin"))
+                        {
+                            pc = line.PostCode;
+                            foreach (var r in list)
+                            {
+                                if (r.PostCode.Equals(pc))
+                                {
+                                    temp.Add(r);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            pc = "dublin " + line.PostCode;
+                            foreach (var r in list)
+                            {
+                                if (r.PostCode.Equals(pc))
+                                {
+                                    temp.Add(r);
+                                }
+                            }
+                        }
+                        list.Clear();
+                        list.AddRange(temp);
+                        temp.Clear();
+                    }
+                }
+                // if market price check box clicked remove from list
+                if (takeOutNoMarket)
+                {
+                    temp = list.Where(i => i.NotFullMP.Equals('N')).ToList();
+                    list.Clear();
+                    list.AddRange(temp);
+                    temp.Clear();
+                }
+                // take out every entry that matches the area picked
+                try
+                {
+                    if (!line.Area.Equals(""))
+                    {
+                        temp = list.Where(i => i.Address.Contains(line.Area.ToLower())).ToList();
+                        list.Clear();
+                        list.AddRange(temp);
+                        temp.Clear();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                // add to list
+                allLists.Add(list);
+
+                // get line details for charts (county,area,year)
+                string lineString = line.County;
+                if ((line.County.Equals("dublin"))&&(!line.PostCode.Equals("All")))
+                {
+                    lineString += " ";
+                    lineString += line.PostCode;
+                }
+                try
+                {
+                    if (!line.Area.Equals(""))
+                    {
+                        lineString += ", ";
+                        lineString += line.Area;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                lineString += ", ";
+                lineString += line.Year;
+                linesString.Add(lineString);
+            }
+        }
+
+        // calculate all data that will be needed by the different charts
+        public void calculateChartData()
+        {
+            median = new List<object>();
+            objectArrayForListChart = new Series[allLists.Count];
+            int counter = 0;
+            newDwelling = new List<object>();
+            secondDwelling = new List<object>();
+            newPercentages = new List<object>();
+            secPercentages = new List<object>();
+            newValues = new List<List<object>>();
+            secValues = new List<List<object>>();
+            finalNewData = new List<object>();
+            finalSecData = new List<object>();
+            foreach (List<ListObject> list in allLists)
+            {
+                // data for line chart
+                List<ListObject> temp = new List<ListObject>();
+                double medianValue = 0;
+                // get whole year median
+                list.OrderBy(i => i.Price).ToList();
+                double medianValueWholeYear = list.ElementAt((list.Count - 1) / 2).Price;
+                // get month by month median
+                for (int i = 0; i < 12; i++)
+                {
+                    temp = list.Where(m => m.SoldOn.Month == (i+1)).ToList();
+                    temp.OrderBy(m => m.Price).ToList();
+                    medianValue = temp.ElementAt((temp.Count - 1) / 2).Price;
+                    median.Add(medianValue);
+                    temp.Clear();
+                }
+                objectArrayForListChart[counter] = new Series { Name = linesString[counter]+" (€"+medianValueWholeYear.ToString()+")", Data = new Data(median.ToArray()) };
+                counter++;
+                median.Clear();
+                // data for new/second chart
+                // new/second dwelling AND // min,max,median per new/second column
+                temp = list.Where(i => i.Description.Equals('N')).ToList();
+                newDwelling.Add(temp.Count);
+                double newPer = ((double)temp.Count / (double)list.Count) * 100;
+                newPercentages.Add(newPer);
+                double minValueNew = temp.Min(i => i.Price);
+                double maxValueNew = temp.Max(i => i.Price);
+                temp.OrderBy(i => i.Price).ToList();
+                double medianValueNew = temp.ElementAt((temp.Count - 1) / 2).Price;
+                List<object> newTemp = new List<object>();
+                newTemp.Add(Math.Round(minValueNew));
+                newTemp.Add(Math.Round(medianValueNew));
+                newTemp.Add(Math.Round(maxValueNew));
+                newValues.Add(newTemp);
+                temp.Clear();
+
+                temp = list.Where(i => i.Description.Equals('S')).ToList();
+                secondDwelling.Add(temp.Count);
+                double secPer = ((double)temp.Count / (double)list.Count) * 100;
+                secPercentages.Add(secPer);
+                double minValueSec = temp.Min(i => i.Price);
+                double maxValueSec = temp.Max(i => i.Price);
+                temp.OrderBy(i => i.Price).ToList();
+                double medianValueSec = temp.ElementAt((temp.Count - 1) / 2).Price;
+                List<object> secTemp = new List<object>();
+                secTemp.Add(Math.Round(minValueSec));
+                secTemp.Add(Math.Round(medianValueSec));
+                secTemp.Add(Math.Round(maxValueSec));
+                secValues.Add(secTemp);
+                temp.Clear();
+                
+            }
+            // calculate data arrays for new/second chart
+            for(int i=0;i<allLists.Count;i++)
+            {
+                // new
+                DotNet.Highcharts.Options.Point temp1 = new DotNet.Highcharts.Options.Point
+                {
+                    Y= Math.Round((double)newPercentages.ElementAt(i)) ,
+                    Color=Color.FromName("colors[0]"),
+                    Drilldown=new Drilldown
+                    {
+                        Name= "Min/Median/Max",
+                        Categories=categoriesDrilldown,
+                        Data=new Data(newValues.ElementAt(i).ToArray()),
+                        Color=Color.FromName("colors[0]")
+                    }
+                };
+                // second
+                DotNet.Highcharts.Options.Point temp2 = new DotNet.Highcharts.Options.Point
+                {
+                    Y = Math.Round((double)secPercentages.ElementAt(i)),
+                    Color = Color.FromName("colors[1]"),
+                    Drilldown = new Drilldown
+                    {
+                        Name = "Min/Median/Max",
+                        Categories = categoriesDrilldown,
+                        Data = new Data(secValues.ElementAt(i).ToArray()),
+                        Color = Color.FromName("colors[1]")
+                    }
+                };
+                finalNewData.Add(temp1);
+                finalSecData.Add(temp2);
+            }
         }
 
     }
@@ -377,10 +446,9 @@ namespace ppr_web.Models
     public class Line
     {
         public string County { get; set; }
+        [DisplayName("Post Code")]
         public string PostCode { get; set; }
         public string Area { get; set; }
-        [DisplayName("Date Range")]
-        public string Date { get; set; }
         public string Year { get; set; }
     }
 }
