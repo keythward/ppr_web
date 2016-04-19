@@ -34,6 +34,10 @@ namespace ppr_web.Models
         List<object> finalSecData;
         Series[] objectArrayForListChart;
         string[] categoriesDrilldown = { "Minimum", "Median", "Maximum" };
+        Dictionary<string, List<double>> areaDictionary;
+        List<object> dictionaryList;
+        List<object> listOfDictionaryLists;
+        bool[] areaPicked;
         // constructor needed to initialize for dynamically created line objects on view
         public CombinedSearch()
         {
@@ -67,6 +71,7 @@ namespace ppr_web.Models
                     .SetSeries(objectArrayForListChart);
                 chartList.Add(lineChart);
                 // new/second hand dwellings percentage per region
+                // drilldown for min/max/median of column
                 Data newData = new Data(finalNewData.ToArray());
                 Data secData = new Data(finalSecData.ToArray());
                 const string NAME = "New/Second Hand Properties";
@@ -169,7 +174,41 @@ namespace ppr_web.Models
                     .AddJavascripVariable("categories", JsonSerializer.Serialize(linesString.ToArray()))
                     .AddJavascripVariable("data", JsonSerializer.Serialize(new[] { newData, secData }));
                 chartList.Add(chart);
-
+                // break down of every line into its areas with median of each
+                // pie charts
+                int pieCount = 1;
+                string pieName = "";
+                foreach(List<object> pieList in listOfDictionaryLists)
+                {
+                    pieName="piechart" + pieCount.ToString();
+                    Highcharts chartPie = new Highcharts(pieName)
+                    .InitChart(new Chart { PlotBackgroundColor = null, PlotBorderWidth = null, PlotShadow = false })
+                    .SetTitle(new Title { Text = "Browser market shares at a specific website, 2014" })
+                    .SetTooltip(new Tooltip { Formatter = @"function() { return '<b>'+ this.point.name +'</b>: '+ this.y +' %';}" })
+                    .SetPlotOptions(new PlotOptions
+                    {
+                        Pie = new PlotOptionsPie
+                        {
+                            AllowPointSelect = true,
+                            Cursor = Cursors.Pointer,
+                            DataLabels = new PlotOptionsPieDataLabels
+                            {
+                                Enabled = true,
+                                Format = "<b>{point.name}</b>: {point.percentage:.1f} %",
+                                Style = "color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'"
+                            }
+                        }
+                    })
+                    .SetSeries(new Series
+                    {
+                        Type = ChartTypes.Pie,
+                        Name = "Browser share",
+                        Data = new Data(pieList.ToArray())
+                    });
+                    chartList.Add(chartPie);
+                    pieCount++;
+                }
+                
 
                 return chartList;
             }
@@ -250,6 +289,8 @@ namespace ppr_web.Models
         {
             linesString = new List<string>();
             allLists = new List<List<ListObject>>();
+            areaPicked = new bool[lineList.Count];
+            int areaCounter = 0;
             foreach (Line line in lineList)
             {
                 List<ListObject> list = new List<ListObject>();
@@ -305,11 +346,12 @@ namespace ppr_web.Models
                         list.Clear();
                         list.AddRange(temp);
                         temp.Clear();
+                        areaPicked[areaCounter] = true;
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    areaPicked[areaCounter] = false;
                 }
                 // add to list
                 allLists.Add(list);
@@ -336,6 +378,7 @@ namespace ppr_web.Models
                 lineString += ", ";
                 lineString += line.Year;
                 linesString.Add(lineString);
+                areaCounter++;
             }
         }
 
@@ -353,8 +396,11 @@ namespace ppr_web.Models
             secValues = new List<List<object>>();
             finalNewData = new List<object>();
             finalSecData = new List<object>();
+            listOfDictionaryLists = new List<object>();
             foreach (List<ListObject> list in allLists)
             {
+                areaDictionary = new Dictionary<string, List<double>>();
+                dictionaryList = new List<object>();
                 // data for line chart
                 List<ListObject> temp = new List<ListObject>();
                 double medianValue = 0;
@@ -371,7 +417,6 @@ namespace ppr_web.Models
                     temp.Clear();
                 }
                 objectArrayForListChart[counter] = new Series { Name = linesString[counter]+" (€"+medianValueWholeYear.ToString()+")", Data = new Data(median.ToArray()) };
-                counter++;
                 median.Clear();
                 // data for new/second chart
                 // new/second dwelling AND // min,max,median per new/second column
@@ -404,7 +449,53 @@ namespace ppr_web.Models
                 secTemp.Add(Math.Round(maxValueSec));
                 secValues.Add(secTemp);
                 temp.Clear();
-                
+
+                // dictionary for break down of every area with price values
+                foreach (ListObject l in list)
+                {
+                    // get the area (key)
+                    string[] breakDown = l.Address.Split(',');
+                    string key;
+                    try
+                    {
+                        // if true area was given so take second last line
+                        // if false no area given so take last line
+                        bool well = areaPicked[counter];
+                        if (well)
+                        {
+                            key = breakDown[breakDown.Length - 2];
+                        }
+                        else
+                        {
+                            key = breakDown[breakDown.Length - 1];
+                        }
+                        // add to dictionary
+                        if (!areaDictionary.ContainsKey(key))
+                        {
+                            //add key
+                            areaDictionary.Add(key, new List<double>());
+                        }
+                        areaDictionary[key].Add(l.Price);
+                    }
+                    catch (Exception e)
+                    {
+
+                    }
+                }
+                // list with key and value (median value of key)
+                // if list for key is smaller than 3 entries ignore it (spelling mistakes)
+                foreach (KeyValuePair<string, List<double>> entry in areaDictionary)
+                {
+                    if (entry.Value.Count > 2)
+                    {
+                        entry.Value.OrderBy(i => i).ToList();
+                        double median= entry.Value.ElementAt((entry.Value.Count - 1) / 2);
+                        dictionaryList.Add(new object[] {entry.Key,median });
+                    }
+                }
+                listOfDictionaryLists.Add(dictionaryList);
+                counter++;
+
             }
             // calculate data arrays for new/second chart
             for(int i=0;i<allLists.Count;i++)
