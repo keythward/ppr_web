@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 namespace ppr_web.Models
 {
@@ -35,8 +36,10 @@ namespace ppr_web.Models
         Series[] objectArrayForListChart;
         string[] categoriesDrilldown = { "Minimum", "Median", "Maximum" };
         Dictionary<string, List<double>> areaDictionary;
-        List<object> dictionaryList;
-        List<object> listOfDictionaryLists;
+        List<string> dictionaryListString;
+        List<object> dictionaryListDouble;
+        List<List<string>> listOfDictionaryListsString;
+        List<List<object>> listOfDictionaryListsDouble;
         bool[] areaPicked;
         // constructor needed to initialize for dynamically created line objects on view
         public CombinedSearch()
@@ -63,7 +66,11 @@ namespace ppr_web.Models
                     .SetTitle(new Title { Text = "Median Property Prices Per Month Per Region" })
                     .SetSubtitle(new Subtitle { Text = "(Median Property Price For The Whole Year)" })
                     .SetYAxis(new YAxis { Title = new YAxisTitle { Text = "Median Property Values" } })
-                    .SetPlotOptions(new PlotOptions { Column = new PlotOptionsColumn { DataLabels = new PlotOptionsColumnDataLabels { Enabled = true } } })
+                    .SetTooltip(new Tooltip { Formatter = "function() { return '<b>'+ this.x +'</b><br/>'+ '€'+this.y.toFixed(0);}"})
+                    .SetPlotOptions(new PlotOptions
+                    {
+                        Column = new PlotOptionsColumn { DataLabels = new PlotOptionsColumnDataLabels { Enabled = true } }
+                    })
                     .SetXAxis(new XAxis
                     {
                         Categories = months
@@ -117,7 +124,7 @@ namespace ppr_web.Models
                         "TooltipFormatter",
                         @"var point = this.point, s = '';
                                   if (point.drilldown) {
-                                    s += this.x +':<b>'+ this.y +'% of '+ this.series.name +' in region</b><br/>' + 'Click to view '+ point.category +' values';
+                                    s += '<b>'+this.y +'% of '+ this.series.name +' in region</b><br/>' + 'Click to view min/max/median values';
                                   } else {
                                     s += this.x +': €<b>'+ this.y +' value</b><br/>'+'Click to return to region percentages';
                                   }
@@ -175,38 +182,58 @@ namespace ppr_web.Models
                     .AddJavascripVariable("data", JsonSerializer.Serialize(new[] { newData, secData }));
                 chartList.Add(chart);
                 // break down of every line into its areas with median of each
-                // pie charts
-                int pieCount = 1;
-                string pieName = "";
-                foreach(List<object> pieList in listOfDictionaryLists)
+                // bar charts
+                int barCount = 1;
+                string barName = "";
+                for(int i=0;i<listOfDictionaryListsString.Count;i++)
                 {
-                    pieName="piechart" + pieCount.ToString();
-                    Highcharts chartPie = new Highcharts(pieName)
-                    .InitChart(new Chart { PlotBackgroundColor = null, PlotBorderWidth = null, PlotShadow = false })
-                    .SetTitle(new Title { Text = "Browser market shares at a specific website, 2014" })
-                    .SetTooltip(new Tooltip { Formatter = @"function() { return '<b>'+ this.point.name +'</b>: '+ this.y +' %';}" })
-                    .SetPlotOptions(new PlotOptions
+                    barName ="barChart" + barCount.ToString();
+                    Highcharts chartBar = new Highcharts(barName)
+                    .InitChart(new Chart { DefaultSeriesType = ChartTypes.Column, Inverted = true })
+                    .SetTitle(new Title { Text = "Areas within the region" })
+                    .SetSubtitle(new Subtitle { Text = linesString[i] })
+                    .SetXAxis(new XAxis
                     {
-                        Pie = new PlotOptionsPie
+                        Categories = listOfDictionaryListsString.ElementAt(i).ToArray(),
+                        Title = new XAxisTitle { Text = "Region Areas" }
+                    })
+                    .SetYAxis(new YAxis
+                    {
+                        Min = 0,
+                        Title = new YAxisTitle
                         {
-                            AllowPointSelect = true,
-                            Cursor = Cursors.Pointer,
-                            DataLabels = new PlotOptionsPieDataLabels
-                            {
-                                Enabled = true,
-                                Format = "<b>{point.name}</b>: {point.percentage:.1f} %",
-                                Style = "color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'"
-                            }
+                            Text = "Median Property Price Values",
+                            Align = AxisTitleAligns.High
                         }
                     })
-                    .SetSeries(new Series
+                    .SetTooltip(new Tooltip { Formatter = "function() { return this.x + '</br>' + 'Median Price:€'+this.y; }" })
+                    .SetPlotOptions(new PlotOptions
                     {
-                        Type = ChartTypes.Pie,
-                        Name = "Browser share",
-                        Data = new Data(pieList.ToArray())
+                        Column = new PlotOptionsColumn
+                        {
+                            DataLabels = new PlotOptionsColumnDataLabels { Enabled = true },
+                            PointWidth=20
+                        }
+                    })
+                    .SetLegend(new Legend
+                    {
+                        Layout = Layouts.Vertical,
+                        Align = HorizontalAligns.Right,
+                        VerticalAlign = VerticalAligns.Top,
+                        X = -100,
+                        Y = 100,
+                        Floating = true,
+                        BorderWidth = 1,
+                        BackgroundColor = new BackColorOrGradient(ColorTranslator.FromHtml("#FFFFFF")),
+                        Shadow = true
+                    })
+                    .SetSeries(new[]
+                    {
+                        new Series { Name="Median Values",Data = new Data(listOfDictionaryListsDouble.ElementAt(i).ToArray()) }
+
                     });
-                    chartList.Add(chartPie);
-                    pieCount++;
+                    chartList.Add(chartBar);
+                    barCount++;
                 }
                 
 
@@ -396,11 +423,13 @@ namespace ppr_web.Models
             secValues = new List<List<object>>();
             finalNewData = new List<object>();
             finalSecData = new List<object>();
-            listOfDictionaryLists = new List<object>();
+            listOfDictionaryListsString = new List<List<string>>();
+            listOfDictionaryListsDouble = new List<List<object>>();
             foreach (List<ListObject> list in allLists)
             {
                 areaDictionary = new Dictionary<string, List<double>>();
-                dictionaryList = new List<object>();
+                dictionaryListString = new List<string>();
+                dictionaryListDouble = new List<object>();
                 // data for line chart
                 List<ListObject> temp = new List<ListObject>();
                 double medianValue = 0;
@@ -416,7 +445,7 @@ namespace ppr_web.Models
                     median.Add(medianValue);
                     temp.Clear();
                 }
-                objectArrayForListChart[counter] = new Series { Name = linesString[counter]+" (€"+medianValueWholeYear.ToString()+")", Data = new Data(median.ToArray()) };
+                objectArrayForListChart[counter] = new Series { Name = linesString[counter]+"  ("+String.Format(new CultureInfo("en-IE"), "{0:C}",(int)Math.Round(medianValueWholeYear))+")", Data = new Data(median.ToArray()) };
                 median.Clear();
                 // data for new/second chart
                 // new/second dwelling AND // min,max,median per new/second column
@@ -490,10 +519,12 @@ namespace ppr_web.Models
                     {
                         entry.Value.OrderBy(i => i).ToList();
                         double median= entry.Value.ElementAt((entry.Value.Count - 1) / 2);
-                        dictionaryList.Add(new object[] {entry.Key,median });
+                        dictionaryListDouble.Add(median);
+                        dictionaryListString.Add(entry.Key);
                     }
                 }
-                listOfDictionaryLists.Add(dictionaryList);
+                listOfDictionaryListsDouble.Add(dictionaryListDouble);
+                listOfDictionaryListsString.Add(dictionaryListString);
                 counter++;
 
             }
