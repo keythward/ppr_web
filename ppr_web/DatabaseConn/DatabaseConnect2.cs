@@ -7,6 +7,7 @@ using System.Configuration;
 using System;
 using System.Linq;
 using ppr_web.Models;
+using ppr_web.Model;
 
 namespace ppr_web.DatabaseConn
 {
@@ -122,6 +123,15 @@ namespace ppr_web.DatabaseConn
             Document doc = GetDocument(id);
             DBRecord docrecord = (DBRecord)doc;
             return docrecord;
+        }
+
+        // get database updated to date and return month
+        public static int ReadUpdateDate()
+        {
+            Document doc = GetDocument("update_dates");
+            UpdateDates docrecord = (UpdateDates)doc;
+            int month = docrecord.updatedTo.Month;
+            return month;
         }
     }
 }

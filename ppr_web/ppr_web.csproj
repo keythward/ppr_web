@@ -152,6 +152,7 @@
     <Compile Include="Models\ContactForm.cs" />
     <Compile Include="Models\DBRecord.cs" />
     <Compile Include="Models\SearchDB.cs" />
+    <Compile Include="Models\UpdateDates.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -63,13 +63,15 @@ namespace ppr_web.Models
                 // line chart with median values per month per region
                 Highcharts lineChart = new Highcharts("lineChart")
                     .InitChart(new Chart { Type = ChartTypes.Line })
+                    .SetOptions(new GlobalOptions { Lang = new DotNet.Highcharts.Helpers.Lang().SetAndUseCulture("en-IE"), Global = new Global { UseUTC = false } })
                     .SetTitle(new Title { Text = "Median Property Prices Per Month Per Region" })
+                    .SetCredits(new Credits { Enabled = false })
                     .SetSubtitle(new Subtitle { Text = "(Median Property Price For The Whole Year)" })
                     .SetYAxis(new YAxis { Title = new YAxisTitle { Text = "Median Property Values" } })
-                    .SetTooltip(new Tooltip { Formatter = "function() { return '<b>'+ this.x +'</b><br/>'+ '€'+this.y.toFixed(0);}"})
+                    .SetTooltip(new Tooltip { Formatter = "function() { return this.x +'<br/>'+ '<b>'+'€'+parseFloat(this.y.toFixed(0)).toLocaleString()+'</b>';}" })
                     .SetPlotOptions(new PlotOptions
                     {
-                        Column = new PlotOptionsColumn { DataLabels = new PlotOptionsColumnDataLabels { Enabled = true } }
+                        Column = new PlotOptionsColumn { DataLabels = new PlotOptionsColumnDataLabels { Enabled = true,Color=Color.Black } }
                     })
                     .SetXAxis(new XAxis
                     {
@@ -84,6 +86,8 @@ namespace ppr_web.Models
                 const string NAME = "New/Second Hand Properties";
                 Highcharts chart = new Highcharts("chart")
                     .InitChart(new Chart { DefaultSeriesType = ChartTypes.Column })
+                    .SetCredits(new Credits { Enabled = false })
+                    .SetOptions(new GlobalOptions { Lang = new DotNet.Highcharts.Helpers.Lang().SetAndUseCulture("en-IE"), Global = new Global { UseUTC = false } })
                     .SetTitle(new Title { Text = "Percentage of New and Second Hand Properties per Region" })
                     .SetSubtitle(new Subtitle { Text = "Click the columns to view min/median/max values. Click again to view percentages." })
                     .SetXAxis(new XAxis { Categories = linesString.ToArray() })
@@ -99,7 +103,7 @@ namespace ppr_web.Models
                             DataLabels = new PlotOptionsColumnDataLabels
                             {
                                 Enabled = true,
-                                Color = Color.DarkOrange,
+                                Color = Color.Black,
                                 Formatter = "labelFormatter",
                                 Style = "fontWeight: 'bold'"
                             }
@@ -189,21 +193,31 @@ namespace ppr_web.Models
                 {
                     barName ="barChart" + barCount.ToString();
                     Highcharts chartBar = new Highcharts(barName)
-                    .InitChart(new Chart { DefaultSeriesType = ChartTypes.Column, Inverted = true })
+                    .InitChart(new Chart { DefaultSeriesType = ChartTypes.Column })
+                    .SetCredits(new Credits { Enabled = false })
+                    .SetOptions(new GlobalOptions { Lang = new DotNet.Highcharts.Helpers.Lang().SetAndUseCulture("en-IE"), Global = new Global { UseUTC = false } })
                     .SetTitle(new Title { Text = "Areas within the region" })
                     .SetSubtitle(new Subtitle { Text = linesString[i] })
                     .SetXAxis(new XAxis
                     {
                         Categories = listOfDictionaryListsString.ElementAt(i).ToArray(),
-                        Title = new XAxisTitle { Text = "Region Areas" }
+                        Title = new XAxisTitle { Text = "Region Areas" },
+                        Labels = new XAxisLabels
+                        {
+                            Rotation = 45
+                        }
                     })
                     .SetYAxis(new YAxis
                     {
-                        Min = 0,
+                        AllowDecimals = false,
+                        LineWidth=5,
+                        MinPadding=5,
+                        StartOnTick=true,
+                        
                         Title = new YAxisTitle
                         {
                             Text = "Median Property Price Values",
-                            Align = AxisTitleAligns.High
+                            Align = AxisTitleAligns.Middle
                         }
                     })
                     .SetTooltip(new Tooltip { Formatter = "function() { return this.x + '</br>' + 'Median Price:€'+this.y; }" })
@@ -211,22 +225,14 @@ namespace ppr_web.Models
                     {
                         Column = new PlotOptionsColumn
                         {
-                            DataLabels = new PlotOptionsColumnDataLabels { Enabled = true },
-                            PointWidth=20
+                            DataLabels = new PlotOptionsColumnDataLabels { Enabled = true,Rotation=90,Crop=false,Overflow="none",
+                                Padding =0,Inside=true,Style= "fontWeight: 'bold'",VerticalAlign=VerticalAligns.Top,
+                                Color = Color.Black,
+                                Align = HorizontalAligns.Right,Formatter= "function(){return '€'+parseFloat(this.y.toFixed(0)).toLocaleString();}"
+                            }
                         }
                     })
-                    .SetLegend(new Legend
-                    {
-                        Layout = Layouts.Vertical,
-                        Align = HorizontalAligns.Right,
-                        VerticalAlign = VerticalAligns.Top,
-                        X = -100,
-                        Y = 100,
-                        Floating = true,
-                        BorderWidth = 1,
-                        BackgroundColor = new BackColorOrGradient(ColorTranslator.FromHtml("#FFFFFF")),
-                        Shadow = true
-                    })
+                    
                     .SetSeries(new[]
                     {
                         new Series { Name="Median Values",Data = new Data(listOfDictionaryListsDouble.ElementAt(i).ToArray()) }
@@ -247,66 +253,110 @@ namespace ppr_web.Models
             List<ListObject> list = new List<ListObject>();
             string doc_id = "";
             DBRecord test = null;
+            // depending on what months are required based on monthCount
+            int monthCount = getMonthCount(year);
             if (county.Equals("Dublin"))
             {
-                doc_id = county + year + "_1";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list = test.records;
-                test = null;
-                doc_id = county + year + "_2";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_3";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_4";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_5";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_6";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_7";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_8";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_9";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_10";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_11";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
-                doc_id = county + year + "_12";
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
-                test = null;
+                if (monthCount >= 1)
+                {
+                    doc_id = county + year + "_1";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list = test.records;
+                    test = null;
+                }
+                if (monthCount >= 2)
+                {
+                    doc_id = county + year + "_2";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 3)
+                {
+                    doc_id = county + year + "_3";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 4)
+                {
+                    doc_id = county + year + "_4";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 5)
+                {
+                    doc_id = county + year + "_5";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 6)
+                {
+                    doc_id = county + year + "_6";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 7)
+                {
+                    doc_id = county + year + "_7";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 8)
+                {
+                    doc_id = county + year + "_8";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 9)
+                {
+                    doc_id = county + year + "_9";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 10)
+                {
+                    doc_id = county + year + "_10";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 11)
+                {
+                    doc_id = county + year + "_11";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
+                if (monthCount >= 12)
+                {
+                    doc_id = county + year + "_12";
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                    test = null;
+                }
             }
             else // rest of ireland (not dublin)
             {
-                doc_id = county + year + "_A"; // first part of year
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list = test.records;
-                test = null;
-                doc_id = county + year + "_B"; // second part of year
-                test = DatabaseConnect2.ReadDocument(doc_id);
-                list.AddRange(test.records);
+                if ((monthCount <= 6)||(monthCount == 12))
+                {
+                    doc_id = county + year + "_A"; // first part of year
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list = test.records;
+                    test = null;
+                }
+                if (monthCount >= 7)
+                {
+                    doc_id = county + year + "_B"; // second part of year
+                    test = DatabaseConnect2.ReadDocument(doc_id);
+                    list.AddRange(test.records);
+                }
             }
             return list;
         }
@@ -403,7 +453,7 @@ namespace ppr_web.Models
                     Console.WriteLine(e.ToString());
                 }
                 lineString += ", ";
-                lineString += line.Year;
+                lineString += line.Year+" ";
                 linesString.Add(lineString);
                 areaCounter++;
             }
@@ -440,12 +490,19 @@ namespace ppr_web.Models
                 for (int i = 0; i < 12; i++)
                 {
                     temp = list.Where(m => m.SoldOn.Month == (i+1)).ToList();
-                    temp.OrderBy(m => m.Price).ToList();
-                    medianValue = temp.ElementAt((temp.Count - 1) / 2).Price;
+                    if (temp.Count == 0)
+                    {
+                        medianValue = 0;
+                    }
+                    else
+                    {
+                        temp.OrderBy(m => m.Price).ToList();
+                        medianValue = temp.ElementAt((temp.Count - 1) / 2).Price;
+                    }
                     median.Add(medianValue);
                     temp.Clear();
                 }
-                objectArrayForListChart[counter] = new Series { Name = linesString[counter]+"  ("+String.Format(new CultureInfo("en-IE"), "{0:C}",(int)Math.Round(medianValueWholeYear))+")", Data = new Data(median.ToArray()) };
+                objectArrayForListChart[counter] = new Series { Name = linesString[counter]+"  ("+String.Format(new CultureInfo("en-IE"), "{0:C}",(int)Math.Round(medianValueWholeYear,0))+")", Data = new Data(median.ToArray()) };
                 median.Clear();
                 // data for new/second chart
                 // new/second dwelling AND // min,max,median per new/second column
@@ -548,18 +605,35 @@ namespace ppr_web.Models
                 DotNet.Highcharts.Options.Point temp2 = new DotNet.Highcharts.Options.Point
                 {
                     Y = Math.Round((double)secPercentages.ElementAt(i)),
-                    Color = Color.FromName("colors[1]"),
+                    Color = Color.FromName("colors[2]"),
                     Drilldown = new Drilldown
                     {
                         Name = "Min/Median/Max",
                         Categories = categoriesDrilldown,
                         Data = new Data(secValues.ElementAt(i).ToArray()),
-                        Color = Color.FromName("colors[1]")
+                        Color = Color.FromName("colors[2]")
                     }
                 };
                 finalNewData.Add(temp1);
                 finalSecData.Add(temp2);
             }
+        }
+        // calculate month count needed for search
+        // if search is this year (eg:2016) get month that database is updated to
+        // if not this year return 12 (every month)
+        public int getMonthCount(string year)
+        {
+            int month;
+            // get update date from database if this year
+            if (DateTime.Now.Year.ToString().Equals(year))
+            {
+                month = DatabaseConnect2.ReadUpdateDate();
+            }
+            else
+            {
+                month = 12;
+            }
+            return month;
         }
 
     }
