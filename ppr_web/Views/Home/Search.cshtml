@@ -48,7 +48,7 @@
                                 @Html.LabelFor(model => model.Year)
                             </div>
                             <div class="col-xs-12 col-md-6 col-sm-6">
-                                @Html.DropDownListFor(model => model.Year, new SelectList(ppr_web.Models.SearchDB.Years), new { @Title = "list of years", @class = "col-md-7 col-xs-12" })
+                                @Html.DropDownListFor(model => model.Year, new SelectList(ppr_web.Models.SearchDB.Years), new { @id = "year-dropdown", @onchange= "showDublinDropdown()", @Title = "list of years", @class = "col-md-7 col-xs-12" })
                             </div>
                         </div>
                         <div class="col-xs-12 col-md-12">
@@ -57,7 +57,9 @@
                             </div>
                             <div class="col-xs-12 col-md-6 col-sm-6">
                                 @Html.DropDownListFor(model => model.Dates, new SelectList(ppr_web.Models.SearchDB.DatesBetween), new { id = "dates-dropdown1", @Title = "choose a date range", @class = "col-md-7 col-xs-12" })
+                                @Html.DropDownListFor(model => model.Dates, new SelectList(ppr_web.Models.SearchDB.DatesBetweenCurrent), new { id = "current-dates-dropdown1", @Title = "choose a date range", @class = "col-md-7 col-xs-12" })
                                 @Html.DropDownListFor(model => model.Dates, new SelectList(ppr_web.Models.SearchDB.DatesBetweenDublin), new { id = "dates-dropdown2", @Title = "choose a date range", @class = "col-md-7 col-xs-12" })
+                                @Html.DropDownListFor(model => model.Dates, new SelectList(ppr_web.Models.SearchDB.DatesBetweenDublinCurrent), new { id = "current-dates-dropdown2", @Title = "choose a date range", @class = "col-md-7 col-xs-12" })
                             </div>
                         </div>
                         <div class="col-xs-12 col-md-12">
@@ -88,7 +90,7 @@
                             @Html.ValidationMessageFor(model => model.PriceValue, "", new { @class = "text-danger col-xs-12 col-md-10 text-center" })
                         </div>
                         <div class="col-xs-4 col-xs-offset-4 padding-top-25">
-                            <input type="submit" value="Search" class="btn btn-default" />
+                            <input type="submit" value="Search" class="btn btn-default" id="submit-button" />
                         </div>
                     </div>
                 </div>
@@ -143,12 +145,16 @@
 
 @section Scripts {
     @Scripts.Render("~/bundles/jqueryval")
-    <script>
+    <script type="text/javascript">
                         $(document).ready(function(){
                             $('#results-table').dataTable();
                         });
                         $(window).load(function () {
                             searchButtonOnDublinClick();
+                        });
+                        $('#submit-button').click(function () {
+                            $('#submit-button').val('running search...');
+                            $('#submit-button').css("background", "green");
                         });
     </script>
 }

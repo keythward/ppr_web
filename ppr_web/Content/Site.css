@@ -33,6 +33,16 @@ textarea {
     display:none;
 }
 
+#current-dates-dropdown1
+{
+    display:none;
+}
+
+#current-dates-dropdown2
+{
+    display:none;
+}
+
 .padding-top-25
 {
     padding-top:25px;

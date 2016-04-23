@@ -61,7 +61,8 @@ namespace ppr_web.Controllers
         [HttpGet]
         public ActionResult Search()
         {
-            return View();
+            SearchDB sdb = new SearchDB();
+            return View(sdb);
         }
 
         // POST: home/search

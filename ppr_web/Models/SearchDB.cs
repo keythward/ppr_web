@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ppr_web.Models
@@ -26,6 +25,15 @@ namespace ppr_web.Models
         public string PostCode { get; set; }
         [DisplayName("Dates Range")]
         public string Dates { get; set; }
+        static int monthCount;
+        public static Dictionary<int, string> monthStrings = new Dictionary<int, string>() { { 0, "All Year" },{1,"January"}, { 2, "February" }, { 3, "March" },
+        {4,"April"},{5,"May"},{6,"June"},{7,"July"},{8,"August"},{9,"September"},{10,"October"},{11,"November"},{12,"December"}};
+
+        public SearchDB()
+        {
+            PriceValue = 10000000;
+            monthCount = getMonthCount(DateTime.Now.Year.ToString());
+        }
 
         // list of counties
         public static string[] Counties
@@ -85,6 +93,22 @@ namespace ppr_web.Models
             }
         }
 
+        // dates range for all but dublin if current year
+        public static string[] DatesBetweenCurrent
+        {
+            get
+            {
+                if(monthCount <= 6)
+                {
+                    return new string[] { "First 6 Months" };
+                }
+                else
+                {
+                    return new string[] { "All Year", "First 6 Months", "Last 6 Months" };
+                }
+            }
+        }
+
         // dates range for only dublin
         public static string[] DatesBetweenDublin
         {
@@ -95,64 +119,124 @@ namespace ppr_web.Models
             }
         }
 
+        // dates range for only dublin if current year
+        public static string[] DatesBetweenDublinCurrent
+        {
+            get
+            {
+                List<string> dates = new List<string>();
+                for(int i = 0; i <= monthCount; i++)
+                {
+                    dates.Add(monthStrings[i]);
+                }
+                return dates.ToArray();
+            }
+        }
+
         // return a list of records for the chosen search county and year
         public List<ListObject> GetLists()
         {
             List<ListObject> list = new List<ListObject>();
             string doc_id = "";
             DBRecord test = null;
+            int thisMonthCount;
+            // depending on what months are required based on year
+            if (Year.Equals(DateTime.Now.Year.ToString()))
+            {
+                thisMonthCount = monthCount;
+            }
+            else
+            {
+                thisMonthCount = 12;
+            }
             if (County.Equals("Dublin"))
             {
                 if (Dates.Equals("All Year"))
                 {
-                    doc_id = County + Year + "_1";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list = test.records;
-                    test = null;
-                    doc_id = County + Year + "_2";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_3";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_4";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_5";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_6";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_7";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_8";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_9";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_10";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_11";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
-                    doc_id = County + Year + "_12";
-                    test = DatabaseConnect2.ReadDocument(doc_id);
-                    list.AddRange(test.records);
-                    test = null;
+                    if (thisMonthCount >= 1)
+                    {
+                        doc_id = County + Year + "_1";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list = test.records;
+                        test = null;
+                    }
+                    if (thisMonthCount >= 2)
+                    {
+                        doc_id = County + Year + "_2";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 3)
+                    {
+                        doc_id = County + Year + "_3";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 4)
+                    {
+                        doc_id = County + Year + "_4";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 5)
+                    {
+                        doc_id = County + Year + "_5";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 6)
+                    {
+                        doc_id = County + Year + "_6";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 7)
+                    {
+                        doc_id = County + Year + "_7";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 8)
+                    {
+                        doc_id = County + Year + "_8";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 9)
+                    {
+                        doc_id = County + Year + "_9";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 10)
+                    {
+                        doc_id = County + Year + "_10";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 11)
+                    {
+                        doc_id = County + Year + "_11";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
+                    if (thisMonthCount >= 12)
+                    {
+                        doc_id = County + Year + "_12";
+                        test = DatabaseConnect2.ReadDocument(doc_id);
+                        list.AddRange(test.records);
+                        test = null;
+                    }
                 }
                 else if (Dates.Equals("January"))
                 {
@@ -433,6 +517,24 @@ namespace ppr_web.Models
                 listForm = FormatList(listSorted);
                 return listForm;
             }
+        }
+
+        // calculate month count needed for search
+        // if search is this year (eg:2016) get month that database is updated to
+        // if not this year return 12 (every month)
+        public static int getMonthCount(string year)
+        {
+            int month;
+            // get update date from database if this year
+            if (DateTime.Now.Year.ToString().Equals(year))
+            {
+                month = DatabaseConnect2.ReadUpdateDate();
+            }
+            else
+            {
+                month = 12;
+            }
+            return month;
         }
     }
 
