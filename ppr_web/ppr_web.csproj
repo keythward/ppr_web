@@ -148,6 +148,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\AdvancedSearch.cs" />
     <Compile Include="Models\CombinedSearch.cs" />
     <Compile Include="Models\ContactForm.cs" />
     <Compile Include="Models\DBRecord.cs" />
@@ -412,6 +413,7 @@
     <Content Include="Views\Home\Combined.cshtml" />
     <Content Include="Views\Shared\EditorTemplates\Collection.cshtml" />
     <Content Include="Views\Shared\EditorTemplates\LineEditor.cshtml" />
+    <Content Include="Views\Home\Advanced.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

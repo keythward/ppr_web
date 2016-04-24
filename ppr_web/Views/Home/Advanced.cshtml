@@ -1,0 +1,83 @@
+﻿@model ppr_web.Models.AdvancedSearch
+
+@{
+    ViewBag.Title = "Advanced";
+}
+
+<div class="text-center">
+    <h2>Mapping Properties From the Property Price Register Database</h2>
+</div>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="row">
+
+        <div class="panel-info col-xs-12 col-md-12">
+            <div class="panel-heading">Options</div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-3 col-xs-12">
+                        @Html.LabelFor(model => model.County, new { @class = "col-md-6 col-xs-12" })
+                        @Html.DropDownListFor(model => model.County, new SelectList(ppr_web.Models.SearchDB.Counties), new { @id = "counties-dropdown", @onchange = "showDublinDropdown()", @Title = "list of counties", @class = "col-md-6 col-xs-12" })
+                    </div>
+                    <div class="col-md-3 col-xs-12" id="toggle-postcode-dropdown">
+                        @Html.LabelFor(model => model.PostCode, new { @class = "col-md-6 col-xs-12" })
+                        @Html.DropDownListFor(model => model.PostCode, new SelectList(ppr_web.Models.SearchDB.PostalCodes), new { @Title = "list of post codes", @class = "col-md-6 col-xs-12" })
+                    </div>
+                    <div class="col-md-6 col-xs-12">
+                        @Html.LabelFor(model => model.Area, new { @class = "col-md-4 col-xs-12" })
+                        @Html.EditorFor(model => model.Area, new { htmlAttributes = new { @Title = "choose an area in the county", @class = "col-md-8 col-xs-12" } })
+                    </div>
+                </div>
+                <div class="col-md-12 col-xs-12 padding-top-25">
+                    @Html.EditorFor(m => m.showAddedDetails)
+                    @Html.LabelFor(m => m.showAddedDetails)
+                </div>
+                <div class="padding-top-25">
+                    <input type="submit" value="Generate Map" class="btn btn-default" id="submit-button" />
+                </div>
+            </div>
+        </div>
+
+        <div id="map" class="col-xs-12 col-md-12">
+
+        </div>
+        <div class="row">
+            @{ if (IsPost)
+                {
+                    
+                }
+            }
+        </div>
+    </div>
+
+}
+
+<div class="padding-top-25">
+    @Html.ActionLink("Back to Home Page", "Index")
+</div>
+
+@section Scripts {
+@Scripts.Render("~/bundles/jqueryval")
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1YdK2EZU8p7EA760nPD06iL39rOdA5kg&callback=initMap" async defer></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1YdK2EZU8p7EA760nPD06iL39rOdA5kg&libraries=places"></script>
+<script type="text/javascript">
+    var map;
+    function initMap()
+    {
+        map = new google.maps.Map(document.getElementById('map'),
+            {
+                center: { lat: 53.350140, lng: -6.266155 }, zoom: 6
+            });
+    }
+</script>
+<script type="text/javascript">
+    $('#submit-button').click(function () {
+        $('#submit-button').val('Generating Map...');
+        $('#submit-button').css("background", "green");
+    });
+</script>
+}
+

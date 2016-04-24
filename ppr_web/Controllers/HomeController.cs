@@ -93,5 +93,20 @@ namespace ppr_web.Controllers
         {
             return View("~/Views/Shared/EditorTemplates/LineEditor.cshtml", new Line());
         }
+
+        // GET: home/advanced
+        [HttpGet]
+        public ActionResult Advanced()
+        {
+            AdvancedSearch ads = new AdvancedSearch();
+            return View(ads);
+        }
+
+        // POST: home/advanced
+        [HttpPost]
+        public ActionResult Advanced(AdvancedSearch ads)
+        {
+            return View(ads);
+        }
     }
 }
