@@ -3,7 +3,6 @@
 using ppr_web.DatabaseConn;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 
 namespace ppr_web.Models
@@ -14,23 +13,21 @@ namespace ppr_web.Models
         public string County { get; set; }
         public string PostCode { get; set; }
         public string Area { get; set; }
-        [DisplayName("Include schools, shops, hospitals in the area")]
-        public bool showAddedDetails { get; set; }
         static int monthCount;
         List<double> medianValues;
         Dictionary<string, List<ListObject>> dictionaryList;
-        public int testCount = 0;
 
         // default constructor needed to calculate what month database is updated to on current year
         public AdvancedSearch()
         {
             monthCount = getMonthCount(DateTime.Now.Year.ToString());
+            dictionaryList = new Dictionary<string, List<ListObject>>();
+            medianValues = new List<double>();
         }
 
         // a dictionary of years and a list of data objects for county/postcode if dublin/area if given 1
         public void GetLists()
         {
-            dictionaryList = new Dictionary<string, List<ListObject>>();
             string doc_id = "";
             DBRecord test = null;
             int thisMonthCount = monthCount;
@@ -218,12 +215,12 @@ namespace ppr_web.Models
                     thisMonthCount = 12;
                 }
             }
+            getMedians();
         }
 
         // get median values for every year
         public void getMedians()
         {
-            medianValues = new List<double>();
             foreach (KeyValuePair<string, List<ListObject>> entry in dictionaryList)
             {
                 entry.Value.OrderBy(i => i.Price).ToList();
@@ -231,8 +228,6 @@ namespace ppr_web.Models
                 medianValues.Add(median);
             }
         }
-
-        // YOU ARE HERE DICTIONARY AND MEDIAN LIST WORKING
 
         // calculate month count needed for search
         // if search is this year (eg:2016) get month that database is updated to
@@ -250,6 +245,24 @@ namespace ppr_web.Models
                 month = 12;
             }
             return month;
+        }
+
+        // return the dictionary
+        public Dictionary<string, List<ListObject>> getDictionary
+        {
+            get
+            {
+                return dictionaryList;
+            }
+        }
+
+        // return the median list
+        public List<double> getMedianList
+        {
+            get
+            {
+                return medianValues;
+            }
         }
     }
 }

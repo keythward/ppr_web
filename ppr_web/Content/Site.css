@@ -79,6 +79,16 @@ textarea {
     width:100%;
 }
 
+#red-colour
+{
+    color:red;
+}
+
+#green-colour
+{
+    color:green;
+}
+
 @-moz-document url-prefix() {
   fieldset { display: table-cell; }
 }

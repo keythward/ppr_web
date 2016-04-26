@@ -1,5 +1,6 @@
 ﻿function showDublinDropdown()
 {
+    $("#areaSelectBox").val('');
     if ($("#counties-dropdown option:selected").text() == "Dublin") {
         $("#toggle-postcode-dropdown").show();
         if ($("#year-dropdown option:selected").text() == "2016") {

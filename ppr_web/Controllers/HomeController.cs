@@ -106,6 +106,7 @@ namespace ppr_web.Controllers
         [HttpPost]
         public ActionResult Advanced(AdvancedSearch ads)
         {
+            ads.GetLists();
             return View(ads);
         }
     }
