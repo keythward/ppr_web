@@ -9,7 +9,6 @@ namespace ppr_web.Models
 {
     public class AdvancedSearch
     {
-        public string API_KEY = "AIzaSyC1YdK2EZU8p7EA760nPD06iL39rOdA5kg";
         public string County { get; set; }
         public string PostCode { get; set; }
         public string Area { get; set; }
@@ -166,7 +165,7 @@ namespace ppr_web.Models
                     }
                     catch (Exception e)
                     {
-                        
+                        Console.WriteLine("error: " + e.ToString());
                     }
                     // add to dictionary
                     dictionaryList.Add(Year, list);
@@ -207,7 +206,7 @@ namespace ppr_web.Models
                     }
                     catch (Exception e)
                     {
-
+                        Console.WriteLine("error: " + e.ToString());
                     }
                     // add to dictionary
                     dictionaryList.Add(Year, list);

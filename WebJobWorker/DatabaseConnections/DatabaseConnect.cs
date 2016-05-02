@@ -8,8 +8,6 @@ using Microsoft.Azure.Documents; // documentdb
 using Microsoft.Azure.Documents.Client; // documentdb
 using Microsoft.Azure.Documents.Linq; // documentdb
 using System.Threading;
-using System.Diagnostics;
-using Microsoft.WindowsAzure.ServiceRuntime;
 using WebJobWorker.Records;
 using WebJobWorker.Model;
 using System.Configuration;

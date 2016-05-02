@@ -3,10 +3,8 @@
 using Microsoft.Azure.Documents; // documentdb
 using Microsoft.Azure.Documents.Client; // documentdb
 using Microsoft.Azure.Documents.Linq; // documentdb
-using Microsoft.WindowsAzure.ServiceRuntime;
 using System;
 using System.Configuration;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

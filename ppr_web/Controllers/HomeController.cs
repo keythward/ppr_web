@@ -1,24 +1,29 @@
 ﻿// main controller for site
 
 using ppr_web.Models;
+using System.Net;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using System.Web.Mvc;
 
 namespace ppr_web.Controllers
 {
     public class HomeController : Controller
     {
+        // GET: home/index
+        [HttpGet]
         public ActionResult Index()
         {
             return View();
         }
 
+        // GET: home/about
+        [HttpGet]
         public ActionResult About()
         {
-            ViewBag.Message = "Your application description page.";
-
             return View();
         }
+
         // GET: home/contact
         [HttpGet]
         public ActionResult Contact()
@@ -28,33 +33,33 @@ namespace ppr_web.Controllers
 
         // POST: home/contact
         [HttpPost]
-        public ActionResult Contact(ContactForm c)
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Contact(ContactForm model)
         {
             // send email from returned contact form
             if (ModelState.IsValid)
             {
-                MailMessage msg = new MailMessage();
-                SmtpClient client = new SmtpClient();
-                //client.Host = "smtp.gmail.com";
-                client.Host = "smtp-mail.outlook.com";
-                client.UseDefaultCredentials = false;
-                client.Port = 25;
-                client.Timeout = 20000;
-                client.EnableSsl = true;
-                client.DeliveryMethod = SmtpDeliveryMethod.Network;
-                client.Credentials = new System.Net.NetworkCredential("ward.keyth2@outlook.com", "blackburn9823");
-
-                msg.From = new MailAddress("ward.keyth2@outlook.com");
-                msg.To.Add("ward.keyth@gmail.com");
-                msg.Subject = "PPR contact form";
-                msg.Body = "From: " + c.FirstName + " Comment: " + c.Comment;
-                client.Send(msg);
-                msg.Dispose();
-                // return View("Success");
-                return View("Search");
-
+                var body = "<p>Email From: {0} ({1})</p><p>Message:</p><p>{2}</p>";
+                var message = new MailMessage();
+                message.To.Add(new MailAddress("ward.keyth@outlook.com"));
+                message.Subject = "PPR project email from contact page";
+                message.Body = string.Format(body, model.FirstName+" "+model.LastName, model.Email, model.Comment);
+                message.IsBodyHtml = true;
+                using (var smtp = new SmtpClient())
+                {
+                    await smtp.SendMailAsync(message);
+                    return RedirectToAction("Sent");
+                }
             }
-            return View(c);
+            return View(model);
+        }
+
+        // if email sent show page
+        // GET: home/sent
+        [HttpGet]
+        public ActionResult Sent()
+        {
+            return View();
         }
 
         // GET: home/search

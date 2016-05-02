@@ -429,6 +429,7 @@ namespace ppr_web.Models
                 catch (Exception e)
                 {
                     areaPicked[areaCounter] = false;
+                    Console.WriteLine("error: " + e.ToString());
                 }
                 // add to list
                 allLists.Add(list);
@@ -565,7 +566,7 @@ namespace ppr_web.Models
                     }
                     catch (Exception e)
                     {
-
+                        Console.WriteLine("error: " + e.ToString());
                     }
                 }
                 // list with key and value (median value of key)

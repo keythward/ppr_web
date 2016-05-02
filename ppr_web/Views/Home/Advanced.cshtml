@@ -88,8 +88,8 @@
     function sortMap() {
         var collection = @Html.Raw(Json.Encode(@Model.getDictionary));
         medians = @Html.Raw(Json.Encode(@Model.getMedianList));
-        var centerAddress='@Model.County';
-        geocoder.geocode( { 'address': centerAddress}, function(results, status) {
+        var countyAddress='@Model.County';
+        geocoder.geocode( { 'address': countyAddress}, function(results, status) {
             if (status == google.maps.GeocoderStatus.OK) {
                 map.setCenter(results[0].geometry.location);
             }});
@@ -97,7 +97,7 @@
             var collectionList=value;
             var year=key;
             $.each(collectionList, function (key1,value1) {
-                var address=value1.Address;
+                var address=value1.Address+", "+countyAddress;
                 var price=value1.Price;
                 var markerLabel;
                 var iconImage;
@@ -109,7 +109,7 @@
                 else{
                     contentString+='<div>Second Hand Property</div>';
                 }
-
+                address+=", "+countyAddress+", Ireland";
                 geocoder.geocode( { 'address': address}, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var infowindow = new google.maps.InfoWindow({
