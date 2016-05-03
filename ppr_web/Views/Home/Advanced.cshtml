@@ -5,7 +5,7 @@
 }
 
 <div class="text-center">
-    <h2>Mapping Properties From the Property Price Register Database</h2>
+    <h2>Map of Properties from the Property Price Register Database</h2>
 </div>
 
 @using (Html.BeginForm())
@@ -62,20 +62,17 @@
     var medians;
 
     function initMap() {
-
         if (typeof map=='undefined') {
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 53.2734, lng: -7.778320310000026 },
                 zoom: 6
             });
         }
-
         geocoder = new google.maps.Geocoder();
 
         $('#submit-button').click(function () {
             $('#submit-button').val('Generating Map...');
             $('#submit-button').css("background", "green");
-
         });
     }
 

@@ -89,6 +89,18 @@ textarea {
     color:green;
 }
 
+#keyth-image2 {
+   padding:1px;
+   border:1px solid #021a40;
+   width:100%;
+   height:100%;
+}
+
+#keyth-image {
+    padding: 1px;
+    border: 1px solid #021a40;
+}
+
 @-moz-document url-prefix() {
   fieldset { display: table-cell; }
 }

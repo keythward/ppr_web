@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using ppr_web.Models;
 using ppr_web.Model;
+using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace ppr_web.DatabaseConn
 {

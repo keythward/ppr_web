@@ -11,6 +11,7 @@ using System.Threading;
 using WebJobWorker.Records;
 using WebJobWorker.Model;
 using System.Configuration;
+using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace WebJobWorker.DatabaseConnections
 {
@@ -18,11 +19,11 @@ namespace WebJobWorker.DatabaseConnections
     {
         // db connection strings
         // from config file
-        private static string connStr = ConfigurationManager.ConnectionStrings["DatabaseConnectionString"].ConnectionString;
-        private static string EndpointUri = ConfigurationManager.ConnectionStrings["DatabaseEndpointUri"].ConnectionString;
+        //private static string connStr = ConfigurationManager.ConnectionStrings["DatabaseConnectionString"].ConnectionString;
+        //private static string EndpointUri = ConfigurationManager.ConnectionStrings["DatabaseEndpointUri"].ConnectionString;
         // from Azure
-        //private static string connStr = RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString");
-        //private static string EndpointUri = RoleEnvironment.GetConfigurationSettingValue("DatabaseEndpointUri");
+        private static string connStr = RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString");
+        private static string EndpointUri = RoleEnvironment.GetConfigurationSettingValue("DatabaseEndpointUri");
         private static string DatabaseId = "db";
         private static string CollectionId = "records";
         private static DocumentClient client = new DocumentClient(new Uri(EndpointUri), connStr);
